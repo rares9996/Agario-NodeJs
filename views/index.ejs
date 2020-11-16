@@ -1,6 +1,16 @@
-<h1>Hi
-    <%= name %>
-</h1>
-<form action="/logout?_method=DELETE" method="POST">
-    <button type="submit">Log Out</button>
-</form>
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Agar.io</title>  
+        <meta charset="UTF-8">
+    </head>
+    <h1>Hi
+        <%= name %>
+    </h1>
+    <form action="/logout?_method=DELETE" method="POST">
+        <button type="submit">Log Out</button>
+    </form>
+<canvas id="agario" width="600" height="600" style="border:1px solid #000000"></canvas>
+    <script src="../game.js"></script>
+</html>
