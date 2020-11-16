@@ -4,10 +4,10 @@ if (process.env.NODE_ENV !== 'production') {
 
 const express = require('express')
 const app = express()
-const bcrypt = require('bcrypt')
-const passport = require('passport')
+const bcrypt = require('bcrypt') //secure password
+const passport = require('passport') //to manage logged in state of users
 const flash = require('express-flash')
-const session = require('express-session')
+const session = require('express-session') //store and persist user across different pages
 const methodOverride = require('method-override')
 const mysql = require('mysql');
 
@@ -72,6 +72,7 @@ db.connect(function(error) {
     console.log('mysql connected to ' + config.host + ", user " + config.user + ", database " + config.base);
 });
 
+//using ejs
 app.set('view-engine', 'ejs')
 app.use(express.urlencoded({ extended: false }))
 app.use(flash())
@@ -84,18 +85,20 @@ app.use(passport.initialize())
 app.use(passport.session())
 app.use(methodOverride('_method'))
 
+//home page -> needs authentication to get there
 app.get('/', checkAuthenticated, (req, res) => {
     const user = req.user
     user.then(user => {
         res.render('index.ejs', { name: user.Username })
     })
-
 })
+
 
 app.get('/login', checkNotAuthenticated, (req, res) => {
     res.render('login.ejs')
 })
 
+//using passport to know the logged in state of users
 app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
     successRedirect: '/',
     failureRedirect: '/login',
@@ -108,7 +111,10 @@ app.get('/register', checkNotAuthenticated, (req, res) => {
 
 app.post('/register', checkNotAuthenticated, async(req, res) => {
     try {
-        const hashedPassword = await bcrypt.hash(req.body.password, 10)
+        //password, email = the name field in register.ejs
+        //async function pause until Promise is settled
+        const hashedPassword = await bcrypt.hash(req.body.password, 10) //secured with bcrypt
+        
         db.query("INSERT INTO users(`Username`,`Email`, `Password`) VALUES(?, ?, ?)", [req.body.name, req.body.email, hashedPassword])
         res.redirect('/login')
     } catch {
@@ -116,11 +122,13 @@ app.post('/register', checkNotAuthenticated, async(req, res) => {
     }
 })
 
+//instead of post
 app.delete('/logout', (req, res) => {
     req.logOut()
     res.redirect('/login')
 })
 
+// users not authenticated not allowed to go to home page
 function checkAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return next()
@@ -129,6 +137,7 @@ function checkAuthenticated(req, res, next) {
     res.redirect('/login')
 }
 
+//users authenticated not going to login page again 
 function checkNotAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
         return res.redirect('/')
@@ -136,4 +145,5 @@ function checkNotAuthenticated(req, res, next) {
     next()
 }
 
+//app running on port 3000
 app.listen(3000)
