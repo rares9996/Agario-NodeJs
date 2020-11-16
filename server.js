@@ -71,7 +71,6 @@ db.connect(function(error) {
 
     console.log('mysql connected to ' + config.host + ", user " + config.user + ", database " + config.base);
 });
-const users = []
 
 app.set('view-engine', 'ejs')
 app.use(express.urlencoded({ extended: false }))
@@ -86,7 +85,11 @@ app.use(passport.session())
 app.use(methodOverride('_method'))
 
 app.get('/', checkAuthenticated, (req, res) => {
-    res.render('index.ejs', { name: req.user.name })
+    const user = req.user
+    user.then(user => {
+        res.render('index.ejs', { name: user.Username })
+    })
+
 })
 
 app.get('/login', checkNotAuthenticated, (req, res) => {
