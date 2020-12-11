@@ -1,0 +1,17 @@
+
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Agar.io</title>  
+        <meta charset="UTF-8">
+        <script src="/socket.io/socket.io.js"></script>
+    </head>
+    <h1>Hi
+        <%= name %>
+    </h1>
+    <form action="/logout?_method=DELETE" method="POST">
+        <button type="submit">Log Out</button>
+    </form>
+<canvas id="agario" width="1100" height="600" style="border:1px solid #000000"></canvas>
+<script src="../client/game.js"></script>
+</html>
