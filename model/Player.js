@@ -15,5 +15,6 @@ class Player {
         ctx.fillStyle = this.color
         ctx.fill();
     }
+    ceva() {}
 }
 module.exports = Player;

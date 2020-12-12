@@ -1,157 +1,93 @@
+var blob;
+var blobs = [];
+var zoom = 1;
+var w = 1000;
+var h = 1000;
+var nrBlobs = 200;
+var randomColor;
 
-let canvas = document.querySelector('canvas');
-const socket = io();
 
-let ctx = canvas.getContext('2d');
+function Blob(x, y, r, randomColor) {
+    this.pos = createVector(x, y);
+    this.r = r;
+    this.vel = createVector(0, 0);
+    this.red = red;
+    this.color = randomColor;
+    this.name = ""
+    this.score = 0;
+    this.update = function() {
 
-let bounds = 1100;
+        var newX = mouseX - width / 2;
+        var newY = mouseY - height / 2;
+        print(this.pos.x + "    " + newX);
+        print(this.pos.y + "    " + newY);
+        if ((this.pos.x > w && newX > 0) || (-this.pos.x > w && newX < 0))
+            newX = 0;
+        if ((this.pos.y > h && newY > 0) || (-this.pos.y > h && newY < 0))
+            newY = 0;
+        var newvel = createVector(newX, newY);
+        newvel.setMag(3);
+        this.vel.lerp(newvel, 0.2);
+        this.pos.add(this.vel);
+    };
 
-class Player {
-  constructor(x, y, radius, color, name) {
-      this.x = x;
-      this.y = y;
-      this.color = color;
-      this.radius = radius;
-      this.name = name;
-      this.move = '';
-  }
-
-  //todo: draw name
-  draw() {
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-      ctx.fillStyle = this.color
-      ctx.fill();
-  }
+    this.eats = function(other) {
+        var d = p5.Vector.dist(this.pos, other.pos);
+        if (d < this.r + other.r) {
+            var sum = PI * this.r * this.r + PI * other.r * other.r;
+            this.r = sqrt(sum / PI);
+            return true;
+        } else {
+            return false;
+        }
+    };
+    this.show = function() {
+        fill(this.color);
+        if (this.name != "") {
+            textSize(20 * this.r / 100);
+            text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
+            document.getElementById("score").innerHTML = this.score;
+        }
+        ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2);
+    };
 }
 
-class Blob {
-  constructor(x, y, radius, color) {
-      this.x = x;
-      this.y = y;
-      this.color = color;
-      this.radius = radius;
-  }
+function setup() {
+    createCanvas(1200, 800);
 
-  draw() {
-      ctx.beginPath()
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-      ctx.fillStyle = this.color
-      ctx.fill();
-  }
-}
-function draw( player_en) {
-  ctx.beginPath();
-  ctx.arc(player_en.x, player_en.y, player_en.radius, 0, Math.PI * 2, false);
-  ctx.fillStyle = player_en.color;
-  ctx.fill();
+    randomColor = color(random(255), random(255), random(255));
+    blob = new Blob(0, 0, 64, randomColor);
+    blob.name = document.getElementById("name").innerHTML;
+    for (var i = 0; i < nrBlobs; i++) {
+        var x = random(-w, w);
+        var y = random(-h, h);
+        randomColor = color(random(255), random(255), random(255));
+        blobs[i] = new Blob(x, y, 16, randomColor);
+    }
 }
 
-const player = new Player(100, 100, 20, 'blue');
-//player.draw();
+function draw() {
+    background(200);
+    translate(width / 2, height / 2);
+    var newzoom = 64 / blob.r;
+    zoom = lerp(zoom, newzoom, 0.1);
+    scale(zoom);
+    translate(-blob.pos.x, -blob.pos.y);
 
-let food = new Array();
 
-function getRandomColor() {
-    var letters = '0123456789ABCDEF';
-    var color = '#';
-    for (var i = 0; i < 6; i++) {
-      color += letters[Math.floor(Math.random() * 16)];
+
+    for (var i = blobs.length - 1; i >= 0; i--) {
+        blobs[i].show();
+        if (blob.eats(blobs[i])) {
+            var x = random(-w, w);
+            var y = random(-h, h);
+            var randomColor;
+            randomColor = color(random(255), random(255), random(255));
+            blobs[i] = new Blob(x, y, 16, randomColor);
+            blob.score++;
+        }
     }
-    return color;
+
+    blob.show();
+    blob.update();
 }
-  
-const createFood = (bounds, radius, numBlobs, food) => {
-    for (let i = 0; i < numBlobs; i++) {
-      let xPos = Math.floor(Math.random() * bounds)
-      let yPos = Math.floor(Math.random() * bounds)
-      
-      color = getRandomColor();
-      
-      let blob = new Blob(xPos, yPos, radius, color);
-      food.push(blob);
-    }
-  }
-
-  const drawFood = (circlesArr) => {
-    for (const circle of circlesArr) {
-      circle.draw();
-    }
-  }
-
-  createFood(1100, 8, 150, food);
-  drawFood(food);
-
-  var movement = {
-    up: false,
-    down: false,
-    left: false,
-    right: false
-  }
-
-
-  
-  document.onkeydown =  function(event) {
-    switch (event.keyCode) {
-      case 65: // A
-        movement.left = true;
-        break;
-      case 87: // W
-        movement.up = true;
-        break;
-      case 68: // D
-        movement.right = true;
-        break;
-      case 83: // S
-        movement.down = true;
-        break;
-    }
-  };
-
-  document.onkeyup = function(event) {
-    switch (event.keyCode) {
-      case 65: // A
-        movement.left = false;
-        break;
-      case 87: // W
-        movement.up = false;
-        break;
-      case 68: // D
-        movement.right = false;
-        break;
-      case 83: // S
-        movement.down = false;
-        break;
-    }
-  };
-
-
-socket.on('new_player', (new_player) =>{  //la primirea mesajului 'new_player', se deseneaza acesta
-  console.log(new_player.name);
-  draw(new_player);
-});
-
-setInterval(function() {  //se transmite mesaj de 'movement' la  un anumit intrval pt miscarea playerilor
-  socket.emit('movement', movement);
- 
-}, 1000 / 60);
-
-socket.on('redraw_players', function(players)  {
- 
-  for( var i = 0 ; i < players.length; i++){
-    if (players[i].move == 'up'){
-      ctx.clearRect(players[i].x-30, players[i].y - 30 + 10, 60, 60);
-      console.log('up');
-    }else if (players[i].move == 'left'){
-      ctx.clearRect(players[i].x-30 + 10, players[i].y - 30, 60, 60);
-      console.log('not up');
-    }else if (players[i].move == 'right'){
-      ctx.clearRect(players[i].x-30 - 10, players[i].y - 30 , 60, 60);
-    }else if (players[i].move == 'down'){
-      ctx.clearRect(players[i].x-30 , players[i].y - 30 -10 , 60, 60);
-    }
-   
-    //ctx.clearRect(0, 0, 1100, 600);
-     draw(players[i]);
-  };
-})
