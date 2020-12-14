@@ -1,20 +1,18 @@
-class Player {
-    constructor(x, y, radius, color, name, id) {
-        this.x = x;
-        this.y = y;
-        this.color = color;
-        this.radius = radius;
-        this.name = name;
-        this.id = id;
-    }
 
-    //todo: draw name
-    draw() {
-        ctx.beginPath()
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        ctx.fillStyle = this.color
-        ctx.fill();
-    }
-    ceva() {}
+class Player {
+    constructor(id) {
+        this.x = Math.random() * 400 + 1;
+        this.y = Math.random() * 400 + 1;
+        this.r = 30;
+        this.pos = 0;
+        this.id = id;
+    
+        this.rgb = {
+          r: Math.random() * 255,
+          g: Math.random() * 255,
+          b: Math.random() * 255,
+        }
+      }
 }
+
 module.exports = Player;
