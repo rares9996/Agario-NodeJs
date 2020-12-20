@@ -178,53 +178,10 @@ function checkNotAuthenticated(req, res, next) {
     }
     next()
 }
-/*
 
-let players = []; 
-function Blob(id, x, y, r) {
-    this.id = id;
-    this.x = x;
-    this.y = y;
-    this.r = r;
-}
-setInterval(refresh, 33);
-
-function refresh() {
-  io.sockets.emit('refresh', players);
-}
-  
-let SOCKET_LIST = {}; 
-//lista unde vor fi stocati playerii
-io.on('connection', socket => {
-    //SOCKET_LIST[socket.id] = socket;
-    socket.on('start', function(data) {
-        console.log(socket.id + ' ' + data.x + ' ' + data.y + ' ' + data.r);
-        let player = new Blob(socket.id, data.x, data.y, data.r);
-        players.push(player);
-    });
-    socket.on('update', function(data) {
-        console.log(socket.id + " " + data.x + " " + data.y + " " + data.r);
-        let player;
-        for (let i = 0; i < players.length; i++) {
-          if (socket.id == players[i].id) {
-            player = player[i];
-          }
-        }
-        player.x = data.x;
-        player.y = data.y;
-        player.r = data.r;
-      });
-  
-      socket.on('disconnect', function() {
-        console.log('Client has disconnected');
-      });
-    
-    
-
-});*/
 
 var players = [];
-setInterval(heartbeat, 100);
+setInterval(heartbeat, 100);//100
 
 function heartbeat() {
     io.sockets.emit('heartbeat', players);
@@ -255,7 +212,7 @@ io.sockets.on(
         socket.on('update', function(data) {
             for (var i = 0; i < players.length; i++) {
                 if (socket.id == players[i].id) {
-                    socket_id = i;
+                    socket_id = i;  //memorarea locului in array-ul de playeri 
                     players[i].x = data.x;
                     players[i].y = data.y;
                     players[i].r = data.r;
@@ -267,6 +224,23 @@ io.sockets.on(
             }
         });
 
+        socket.on('somebdy_eat', function(data) {
+            for (var i = 0; i < players.length; i++) {
+                if (data.name == players[i].name) {
+                    players[i].x = data.x;
+                    players[i].y = data.y;
+                    players[i].r = data.r;
+                    players[i].color = data.color;
+                    players[i].score = data.score;
+                    players[i].name = data.name;
+                }
+            }
+        });
+
+        //socket.emit('chat-message', 'Welcome!')
+        socket.on('send-chat-message', message =>{
+            socket.broadcast.emit('chat-message', {message: message, name: players[socket_id].name});
+        })
         socket.on('disconnect', function() {
             console.log('Client has disconnected');
             players.splice(socket_id, 1);
