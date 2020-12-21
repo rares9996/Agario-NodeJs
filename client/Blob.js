@@ -62,13 +62,31 @@ function Blob(x, y, r, randomColor) {
             return false;
         }
     };
+
+    this.eatenBy = function(other) {
+        let d = p5.Vector.dist(this.pos, other.pos); 
+        if (d < /*this.r +*/ other.r && (other.r > this.r)) {      
+            return true;
+        } else {
+            return false;
+        }
+    };
+    this.eatsPlayer = function(other) {
+        let d = p5.Vector.dist(this.pos, other.pos); 
+        if (d < this.r /*+ other.r*/  && (other.r < this.r) && (other.score != 0)) {      
+            return true;
+        } else {
+            return false;
+        }
+    };
     this.show = function() {
         fill(this.color);
         if (this.name != "") { //desenare scor si nume
             textSize(20 * this.r / 100);
             text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
-            document.getElementById("score").innerHTML = this.score;
+            document.getElementById("score").innerHTML = this.score;    
         }
+        fill(this.color);
         ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2); //deseneaza cerc cu centrul in x,y si diametrul dat (inaltime, lungime)
     };
     this.constrain = function() {
@@ -77,10 +95,11 @@ function Blob(x, y, r, randomColor) {
     };
     this.draw = function() {
         fill(this.color);
+       
         if (this.name != "") { //desenare scor si nume
             textSize(20 * this.r / 100);
             text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
-            document.getElementById("score").innerHTML = this.score;
+           
         }
         ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2); //deseneaza cerc cu centrul in x,y si diametrul dat (inaltime, lungime)
     }

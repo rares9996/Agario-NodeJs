@@ -1,3 +1,5 @@
+
+
 let blob;
 let blobs = [];
 let zoom = 1;
@@ -9,57 +11,6 @@ let initialRadius = 25;
 const socket = io();
 let players = [];
 let player;
-let idList;
-let numberPlayers = 0;
-
-
-/*
-
-function Blob(x, y, r, randomColor) {
-    this.pos = createVector(x, y);
-    this.r = r;
-    this.vel = createVector(0, 0);
-    this.color = randomColor;
-    this.name = ""
-    this.score = 0;
-    this.update = function() {
-
-        let newX = mouseX - width / 2;   //noile miscari sunt relative la centrul view-ului
-        let newY = mouseY - height / 2;
-        print(this.pos.x + "    " + newX);
-        print(this.pos.y + "    " + newY);
-        if ((this.pos.x > w && newX > 0) || (-this.pos.x > w && newX < 0))
-            newX = 0;
-        if ((this.pos.y > h && newY > 0) || (-this.pos.y > h && newY < 0))
-            newY = 0;
-        let newvel = createVector(newX, newY); //viteza
-        newvel.setMag(3); //lungimea vectorului cu care se controleaza viteza
-        this.vel.lerp(newvel, 0.2);
-        this.pos.add(this.vel);
-    };
-
-    this.eats = function(other) {
-        let d = p5.Vector.dist(this.pos, other.pos); //calc distanta dintre player si food
-        if (d < this.r + other.r) {  //veirificam distanta dintre cele doua si suma razelor pt a vedea daca exista coliziune
-
-            let sum = PI * this.r * this.r + PI * other.r * other.r; //suma ariilor
-            this.r = sqrt(sum / PI); //deducem raza finala a playerul dupa ce a mancat
-            return true;
-        } else {
-            return false;
-        }
-    };
-    this.show = function() {
-        fill(this.color);
-        if (this.name != "") {   //desenare scor si nume
-            textSize(20 * this.r / 100);
-            text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
-            document.getElementById("score").innerHTML = this.score;
-        }
-        ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2); //deseneaza cerc cu centrul in x,y si diametrul dat (inaltime, lungime)
-    };
-}
-*/
 
 function setup() {
     createCanvas(1200, 800);
@@ -88,10 +39,18 @@ function setup() {
     socket.on('heartbeat', function(data) {
         players = data;
     });
+    
+ 
 }
 
+function mousePressed() {
+    loop();
+ }
 
 function draw() {
+    if ( keyIsPressed == true){
+        noLoop();
+    } 
     background(200);
     translate(width / 2, height / 2);
     var newzoom = 64 / blob.r;
@@ -114,7 +73,9 @@ function draw() {
             blob.score++;
         }
     }
-
+   // console.log("Scor" + blob.score);
+    document.getElementById("score").innerHTML = blob.score;
+    
     var data = {
         x: blob.pos.x,
         y: blob.pos.y,
@@ -124,11 +85,169 @@ function draw() {
         score: blob.score
     };
     socket.emit('update', data);
+
+    var eaten =false;
+
+  
     for (var i = players.length - 1; i >= 0; i--) {
         player = new Blob(players[i].x, players[i].y, players[i].r, players[i].color);
         player.name = players[i].name;
         player.score = players[i].score;
         player.show();
+
+        player.x = 0;
+        player.y = 0;
+        player.show();
+          if((players.length > 1) && (blob.name != player.name) ) {
+        
+        
+        if(blob.eatsPlayer(player)) {
+                    
+                    blob.r = blob.r + 3;
+                    blob.score = blob.score + player.score;
+                    player.x = 0;
+                    player.y = 0;
+                    player.r = 20;
+                    player.score = 0;
+                    var data_player = {
+                        x: player.x,
+                        y: player.y,
+                        r: player.r,
+                        color: player.color,
+                        name: player.name,
+                        score: player.score
+                    };
+                    
+                    socket.emit('somebdy_eat', data_player);
+                    
+
+                    var data = {
+                        x: blob.pos.x,
+                        y: blob.pos.y,
+                        r: blob.r,
+                        color: blob.color,
+                        name: blob.name,
+                        score: blob.score
+                    };
+                    socket.emit('update', data);
+                 
+               
+                    eaten = false;
+               // }
+           }
+
+            if(blob.eatenBy(player)) {    //cand este mancat, schimba propriul view si anunta serverul de noua pozitie a
+                                         //celui cu care a fost interactiunea
+                blob.score = 0;
+                blob.r = 20;
+                blob.pos.x = 0;
+                blob.pos.y = 0;
+
+                player.r = player.r + 3;
+                player.score = player.score + blob.score;
+                var data_player = {
+                    x: player.x,
+                    y: player.y,
+                    r: player.r,
+                    color: player.color,
+                    name: player.name,
+                    score: player.score
+                };
+                
+                socket.emit('somebdy_eat', data_player);
+               
+                var data = {
+                    x: blob.pos.x,
+                    y: blob.pos.y,
+                    r: blob.r,
+                    color: blob.color,
+                    name: blob.name,
+                    score: blob.score
+                };
+                socket.emit('update', data);
+                console.log('eaten');
+                eaten = true;
+                eats = false;
+            }
+        }
+        
+    }
+    var modal = document.getElementById("GameOver");
+    var span = document.getElementsByClassName("close")[0];
+    if (eaten == true){
+        noLoop();
+       
+        modal.style.display = "block";
+        
+    }
+
+    span.onclick = function() {
+      modal.style.display = "none";
+     }
+    window.onclick = function(event) {
+      if (event.target == modal) {
+        modal.style.display = "none";
+      }
+    }
+  
+    for(var i = players.length - 1; i >= 0; i--){
+        player = new Blob(players[i].x, players[i].y, players[i].r, players[i].color);
+        player.name = players[i].name;
+        player.score = players[i].score;
+        pos = getBoardPosition(players, player);
+        document.getElementById("p"+ (pos)).innerHTML = player.name + player.score ;
     }
     blob.update();
 }
+
+function getBoardPosition(players, element){
+    var clonePlayers = players.slice();
+    clonePlayers.sort(function(a,b) { return b.score - a.score});
+
+    return clonePlayers.findIndex(x => x.name == element.name) + 1;
+
+}
+const messageForm = document.getElementById("send-container");
+const messageInput = document.getElementById("message-input");
+const messageContainer = document.getElementById("message-container");
+const msgerChat = document.getElementById("main");
+
+socket.on('chat-message', data=>{
+    //appendMessage(`${data.name}: ${data.message}`);
+    appendMessage(data.name, 'https://www.flaticon.com/svg/static/icons/svg/1256/1256650.svg', 'left', data.message) ;
+});
+
+messageForm.addEventListener('submit', e=> {
+    e.preventDefault();   //not posting on page => not refreshing
+    const  message = messageInput.value;
+   // appendMessage(`You: ${message}`);
+    appendMessage('You','https://image.flaticon.com/icons/svg/145/145867.svg', 'right', message );
+    socket.emit('send-chat-message', message);
+    messageInput.value = '';
+})
+
+/*function appendMessage(message) {
+    const messageElement = document.createElement('div');
+    messageElement.innerText = message;
+    messageContainer.append(messageElement);
+}*/
+
+function appendMessage(name, img, side, text) {
+    const msgHTML = `
+      <div class="msg ${side}-msg">
+        <div class="msg-img" style="background-image: url(${img})"></div>
+  
+        <div class="msg-bubble">
+          <div class="msg-info">
+            <div class="msg-info-name">${name}</div>
+  
+          <div class="msg-text">${text}</div>
+        </div>
+      </div>
+    `;
+   
+    msgerChat.insertAdjacentHTML("beforeend", msgHTML);
+    msgerChat.scrollTop += 500;
+  }
+
+
