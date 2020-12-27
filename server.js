@@ -140,20 +140,45 @@ app.post('/login', checkNotAuthenticated, passport.authenticate('local', {
 }))
 
 app.get('/register', checkNotAuthenticated, (req, res) => {
-    res.render('register.ejs')
+    res.render("register.ejs", {
+        message: null
+    });
 })
+const userExists = (username) => {
+    return new Promise((resolve, reject) => {
+        db.query(
+            'SELECT id FROM users WHERE username = ?  LIMIT 1', [username],
+            (error, result) => {
+                if (error) return reject(error);
 
+                if (result && result[0]) {
+                    return resolve(true);
+                }
+
+                resolve(false);
+            });
+    });
+};
 app.post('/register', checkNotAuthenticated, async(req, res) => {
-    try {
-        //password, email = the name field in register.ejs
-        //async function pause until Promise is settled
-        const hashedPassword = await bcrypt.hash(req.body.password, 10) //secured with bcrypt
+    const exists = await userExists(req.body.name);
+    if (!exists) {
+        try {
+            //password, email = the name field in register.ejs
+            //async function pause until Promise is settled
+            const hashedPassword = await bcrypt.hash(req.body.password, 10) //secured with bcrypt
+            db.query("INSERT INTO users(`Username`,`Email`, `Password`) VALUES(?, ?, ?)", [req.body.name, req.body.email, hashedPassword])
+            res.redirect('/login')
+        } catch (e) {
+            res.redirect('/register')
+        }
+    } else {
+        req.flash('message', "Name already exists");
+        res.render("register.ejs", {
+            message: req.flash('message'),
+        });
 
-        db.query("INSERT INTO users(`Username`,`Email`, `Password`) VALUES(?, ?, ?)", [req.body.name, req.body.email, hashedPassword])
-        res.redirect('/login')
-    } catch {
-        res.redirect('/register')
     }
+
 })
 
 //instead of post
@@ -165,12 +190,15 @@ app.delete('/logout', (req, res) => {
 // users not authenticated not allowed to go to home page
 function checkAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
+        io.sockets.emit('reloaded', players);
         return next()
+
     }
 
     res.redirect('/login')
 }
-
+var socket_id;
+var players = [];
 //users authenticated not going to login page again 
 function checkNotAuthenticated(req, res, next) {
     if (req.isAuthenticated()) {
@@ -180,8 +208,8 @@ function checkNotAuthenticated(req, res, next) {
 }
 
 
-var players = [];
-setInterval(heartbeat, 100);//100
+
+setInterval(heartbeat, 10);
 
 function heartbeat() {
     io.sockets.emit('heartbeat', players);
@@ -196,23 +224,23 @@ function Blob(id, x, y, r, color, name, score) {
     this.name = name;
     this.score = score;
 }
-var socket_id;
+
 io.sockets.on(
     'connection',
     // We are given a websocket object in our function
     function(socket) {
         console.log('We have a new client: ' + socket.id);
-
+        var blob;
         socket.on('start', function(data) {
             console.log(socket.id + ' ' + data.x + ' ' + data.y + ' ' + data.r + ' ' + data.name + ' ' + data.score);
-            var blob = new Blob(socket.id, data.x, data.y, data.r, data.color, data.name, data.score);
+            blob = new Blob(socket.id, data.x, data.y, data.r, data.color, data.name, data.score);
             players.push(blob);
         });
 
         socket.on('update', function(data) {
             for (var i = 0; i < players.length; i++) {
                 if (socket.id == players[i].id) {
-                    socket_id = i;  //memorarea locului in array-ul de playeri 
+                    socket_id = i; //memorarea locului in array-ul de playeri 
                     players[i].x = data.x;
                     players[i].y = data.y;
                     players[i].r = data.r;
@@ -226,7 +254,7 @@ io.sockets.on(
 
         socket.on('somebdy_eat', function(data) {
             for (var i = 0; i < players.length; i++) {
-                if (data.name == players[i].name) {
+                if (data.name === players[i].name) {
                     players[i].x = data.x;
                     players[i].y = data.y;
                     players[i].r = data.r;
@@ -238,12 +266,12 @@ io.sockets.on(
         });
 
         //socket.emit('chat-message', 'Welcome!')
-        socket.on('send-chat-message', message =>{
-            socket.broadcast.emit('chat-message', {message: message, name: players[socket_id].name});
+        socket.on('send-chat-message', message => {
+            socket.broadcast.emit('chat-message', { message: message, name: players[socket_id].name });
         })
         socket.on('disconnect', function() {
             console.log('Client has disconnected');
-            players.splice(socket_id, 1);
+            players.pop(blob);
         });
     }
 );

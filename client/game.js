@@ -1,5 +1,3 @@
-
-
 let blob;
 let blobs = [];
 let zoom = 1;
@@ -11,9 +9,11 @@ let initialRadius = 25;
 const socket = io();
 let players = [];
 let player;
+var score = 0;
 
 function setup() {
     createCanvas(1200, 800);
+    console.log(this.score);
     for (let i = 0; i < nrBlobs; i++) {
         let x = random(-w, w);
         let y = random(-h, h);
@@ -25,7 +25,7 @@ function setup() {
     for (var i = 0; i < 6; i++) {
         colors += letters[Math.floor(Math.random() * 16)];
     }
-    blob = new Blob(0, 0, 64, colors);
+    blob = new Blob(0, 0, initialRadius, colors);
     blob.name = document.getElementById("name").innerHTML;
     var data = {
         x: blob.pos.x,
@@ -35,25 +35,28 @@ function setup() {
         name: blob.name,
         score: blob.score
     };
+    socket.on('reloaded', function(data) {
+        players = data;
+    });
     socket.emit('start', data);
     socket.on('heartbeat', function(data) {
         players = data;
     });
-    
- 
+
+
 }
 
 function mousePressed() {
     loop();
- }
+}
 
 function draw() {
-    if ( keyIsPressed == true){
+    if (keyIsPressed == true) {
         noLoop();
-    } 
+    }
     background(200);
     translate(width / 2, height / 2);
-    var newzoom = 64 / blob.r;
+    var newzoom = 50 / blob.r;
     zoom = lerp(zoom, newzoom, 0.1);
     scale(zoom);
     translate(-blob.pos.x, -blob.pos.y);
@@ -69,13 +72,13 @@ function draw() {
             var y = random(-h, h);
             var randomColor;
             randomColor = color(random(255), random(255), random(255));
+            blob.score += 16 / (blob.r * 0.5);
             blobs[i] = new Blob(x, y, 16, randomColor);
-            blob.score++;
+
         }
     }
-   // console.log("Scor" + blob.score);
-    document.getElementById("score").innerHTML = blob.score;
-    
+    console.log(blob.name);
+
     var data = {
         x: blob.pos.x,
         y: blob.pos.y,
@@ -86,76 +89,27 @@ function draw() {
     };
     socket.emit('update', data);
 
-    var eaten =false;
+    var eaten = false;
 
-  
+    console.log(blob.score);
     for (var i = players.length - 1; i >= 0; i--) {
+
         player = new Blob(players[i].x, players[i].y, players[i].r, players[i].color);
         player.name = players[i].name;
         player.score = players[i].score;
-        player.show();
-
+        if (player.name != blob.name)
+            player.show();
         player.x = 0;
         player.y = 0;
-        player.show();
-          if((players.length > 1) && (blob.name != player.name) ) {
-        
-        
-        if(blob.eatsPlayer(player)) {
-                    
-                    blob.r = blob.r + 3;
-                    blob.score = blob.score + player.score;
-                    player.x = 0;
-                    player.y = 0;
-                    player.r = 20;
-                    player.score = 0;
-                    var data_player = {
-                        x: player.x,
-                        y: player.y,
-                        r: player.r,
-                        color: player.color,
-                        name: player.name,
-                        score: player.score
-                    };
-                    
-                    socket.emit('somebdy_eat', data_player);
-                    
+        if ((players.length > 1) && (blob.name != player.name)) {
 
-                    var data = {
-                        x: blob.pos.x,
-                        y: blob.pos.y,
-                        r: blob.r,
-                        color: blob.color,
-                        name: blob.name,
-                        score: blob.score
-                    };
-                    socket.emit('update', data);
-                 
-               
-                    eaten = false;
-               // }
-           }
 
-            if(blob.eatenBy(player)) {    //cand este mancat, schimba propriul view si anunta serverul de noua pozitie a
-                                         //celui cu care a fost interactiunea
-                blob.score = 0;
-                blob.r = 20;
-                blob.pos.x = 0;
-                blob.pos.y = 0;
+            if (blob.eatsPlayer(player)) {
+                players[i].x = 0;
+                players[i].y = 0;
+                players[i].r = 20;
+                players[i].score = 0;
 
-                player.r = player.r + 3;
-                player.score = player.score + blob.score;
-                var data_player = {
-                    x: player.x,
-                    y: player.y,
-                    r: player.r,
-                    color: player.color,
-                    name: player.name,
-                    score: player.score
-                };
-                
-                socket.emit('somebdy_eat', data_player);
-               
                 var data = {
                     x: blob.pos.x,
                     y: blob.pos.y,
@@ -165,44 +119,88 @@ function draw() {
                     score: blob.score
                 };
                 socket.emit('update', data);
+                var data_player = {
+                    x: players[i].x,
+                    y: players[i].y,
+                    r: players[i].r,
+                    color: players[i].color,
+                    name: players[i].name,
+                    score: players[i].score
+                };
+                socket.emit('somebdy_eat', data_player);
+                console.log('ai mancat ceva');
+
+                eaten = false;
+                // }
+            }
+
+            if (blob.eatenBy(player)) { //cand este mancat, schimba propriul view si anunta serverul de noua pozitie a
+                //celui cu care a fost interactiunea
+                blob.score = 0;
+                blob.r = 20;
+                blob.pos.x = 0;
+                blob.pos.y = 0;
+
+                players[i].score = players[i].score + blob.score;
+                let sum = PI * players[i].r * players[i].r + PI * (blob.r * blob.r) / (players[i].r * 0.01); //suma ariilor
+                players[i].r = sqrt(sum / PI); //deducem raza finala a playerul dupa ce a mancat
+                var data = {
+                    x: blob.pos.x,
+                    y: blob.pos.y,
+                    r: blob.r,
+                    color: blob.color,
+                    name: blob.name,
+                    score: blob.score
+                };
+                socket.emit('update', data);
+                var data_player = {
+                    x: players[i].x,
+                    y: players[i].y,
+                    r: players[i].r,
+                    color: players[i].color,
+                    name: players[i].name,
+                    score: players[i].score
+                };
+                socket.emit('somebdy_eat', data_player);
                 console.log('eaten');
                 eaten = true;
                 eats = false;
             }
         }
-        
+
     }
     var modal = document.getElementById("GameOver");
     var span = document.getElementsByClassName("close")[0];
-    if (eaten == true){
+    if (eaten == true) {
         noLoop();
-       
         modal.style.display = "block";
-        
+
     }
 
     span.onclick = function() {
-      modal.style.display = "none";
-     }
-    window.onclick = function(event) {
-      if (event.target == modal) {
         modal.style.display = "none";
-      }
     }
-  
-    for(var i = players.length - 1; i >= 0; i--){
+    window.onclick = function(event) {
+        if (event.target == modal) {
+            modal.style.display = "none";
+        }
+    }
+
+
+    for (var i = players.length - 1; i >= 0; i--) {
         player = new Blob(players[i].x, players[i].y, players[i].r, players[i].color);
         player.name = players[i].name;
-        player.score = players[i].score;
+        player.score = parseInt(players[i].score);
         pos = getBoardPosition(players, player);
-        document.getElementById("p"+ (pos)).innerHTML = player.name + player.score ;
+        document.getElementById("p" + (pos)).innerHTML = player.name + player.score;
     }
+    blob.show();
     blob.update();
 }
 
-function getBoardPosition(players, element){
+function getBoardPosition(players, element) {
     var clonePlayers = players.slice();
-    clonePlayers.sort(function(a,b) { return b.score - a.score});
+    clonePlayers.sort(function(a, b) { return b.score - a.score });
 
     return clonePlayers.findIndex(x => x.name == element.name) + 1;
 
@@ -212,16 +210,16 @@ const messageInput = document.getElementById("message-input");
 const messageContainer = document.getElementById("message-container");
 const msgerChat = document.getElementById("main");
 
-socket.on('chat-message', data=>{
+socket.on('chat-message', data => {
     //appendMessage(`${data.name}: ${data.message}`);
-    appendMessage(data.name, 'https://www.flaticon.com/svg/static/icons/svg/1256/1256650.svg', 'left', data.message) ;
+    appendMessage(data.name, 'https://www.flaticon.com/svg/static/icons/svg/1256/1256650.svg', 'left', data.message);
 });
 
-messageForm.addEventListener('submit', e=> {
-    e.preventDefault();   //not posting on page => not refreshing
-    const  message = messageInput.value;
-   // appendMessage(`You: ${message}`);
-    appendMessage('You','https://image.flaticon.com/icons/svg/145/145867.svg', 'right', message );
+messageForm.addEventListener('submit', e => {
+    e.preventDefault(); //not posting on page => not refreshing
+    const message = messageInput.value;
+    // appendMessage(`You: ${message}`);
+    appendMessage('You', 'https://image.flaticon.com/icons/svg/145/145867.svg', 'right', message);
     socket.emit('send-chat-message', message);
     messageInput.value = '';
 })
@@ -245,9 +243,7 @@ function appendMessage(name, img, side, text) {
         </div>
       </div>
     `;
-   
+
     msgerChat.insertAdjacentHTML("beforeend", msgHTML);
     msgerChat.scrollTop += 500;
-  }
-
-
+}

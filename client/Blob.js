@@ -35,6 +35,7 @@ function Blob(x, y, r, randomColor) {
     this.color = randomColor;
     this.name = ""
     this.score = 0;
+    this.invincible = false;
 
     this.update = function() {
 
@@ -45,7 +46,8 @@ function Blob(x, y, r, randomColor) {
         if ((this.pos.y > h && newY > 0) || (-this.pos.y > h && newY < 0))
             newY = 0;
         var newvel = createVector(newX, newY);
-        newvel.setMag(3);
+        var n = 50 / sqrt(this.r);
+        newvel.setMag(n);
         this.vel.lerp(newvel, 0.2);
         this.pos.add(this.vel);
 
@@ -54,8 +56,7 @@ function Blob(x, y, r, randomColor) {
     this.eats = function(other) {
         let d = p5.Vector.dist(this.pos, other.pos); //calc distanta dintre player si food
         if (d < this.r + other.r) { //veirificam distanta dintre cele doua si suma razelor pt a vedea daca exista coliziune
-
-            let sum = PI * this.r * this.r + PI * other.r * other.r; //suma ariilor
+            let sum = PI * this.r * this.r + PI * (other.r * other.r) / (this.r * 0.02); //suma ariilor
             this.r = sqrt(sum / PI); //deducem raza finala a playerul dupa ce a mancat
             return true;
         } else {
@@ -64,16 +65,21 @@ function Blob(x, y, r, randomColor) {
     };
 
     this.eatenBy = function(other) {
-        let d = p5.Vector.dist(this.pos, other.pos); 
-        if (d < /*this.r +*/ other.r && (other.r > this.r)) {      
+        let d = p5.Vector.dist(this.pos, other.pos);
+        if (d < /*this.r +*/ other.r && (other.r > this.r) && !this.invincible) {
+            this.score = 0;
             return true;
         } else {
             return false;
         }
     };
     this.eatsPlayer = function(other) {
-        let d = p5.Vector.dist(this.pos, other.pos); 
-        if (d < this.r /*+ other.r*/  && (other.r < this.r) && (other.score != 0)) {      
+        let d = p5.Vector.dist(this.pos, other.pos);
+        if (d < this.r && (other.r < this.r) && !other.invincible) {
+            let sum = PI * this.r * this.r + PI * (other.r * other.r) / (this.r * 0.01); //suma ariilor
+            this.r = sqrt(sum / PI); //deducem raza finala a playerul dupa ce a mancat
+            this.score += other.score;
+            other.score = 0;
             return true;
         } else {
             return false;
@@ -84,7 +90,7 @@ function Blob(x, y, r, randomColor) {
         if (this.name != "") { //desenare scor si nume
             textSize(20 * this.r / 100);
             text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
-            document.getElementById("score").innerHTML = this.score;    
+            document.getElementById("score").innerHTML = parseInt(this.score);
         }
         fill(this.color);
         ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2); //deseneaza cerc cu centrul in x,y si diametrul dat (inaltime, lungime)
@@ -95,11 +101,11 @@ function Blob(x, y, r, randomColor) {
     };
     this.draw = function() {
         fill(this.color);
-       
+
         if (this.name != "") { //desenare scor si nume
             textSize(20 * this.r / 100);
             text(this.name, this.pos.x - this.r * 0.5, this.pos.y + this.r);
-           
+
         }
         ellipse(this.pos.x, this.pos.y, this.r * 2, this.r * 2); //deseneaza cerc cu centrul in x,y si diametrul dat (inaltime, lungime)
     }
