@@ -11,6 +11,58 @@ let players = [];
 let player;
 var score = 0;
 
+
+var Experience = function (score) {
+    this.score = score;
+    this.badge = '🥉';
+    var currentState = new Junior(this);
+   
+    this.change = function (state) {
+        currentState = state;
+        currentState.go();
+    };
+ 
+    this.start = function () {
+        currentState.go();
+    };
+}
+
+var Junior = function (exp) {
+    this.exp = exp;
+    exp.badge = '🥉';
+    this.go = function () {
+        console.log("Junior");
+        if (exp.score > 50){
+            exp.change(new Medium(exp));
+        }
+    }
+};
+
+var Medium = function (exp) {
+    this.exp = exp;
+    exp.badge = '🥈';
+    this.go = function () {
+        console.log("Medium");
+        if (exp.score > 100){
+            exp.change(new Expert(exp));
+        }
+    }
+};
+
+var Expert = function (exp) {
+    this.exp = exp;
+    exp.badge = '🥇';
+    this.go = function () {
+        console.log("Expert");
+        if (exp.score < 50){
+            exp.change(new Junior(exp));
+        }
+    }
+};
+
+
+
+
 function setup() {
     createCanvas(1200, 800);
     console.log(this.score);
@@ -192,7 +244,13 @@ function draw() {
         player.name = players[i].name;
         player.score = parseInt(players[i].score);
         pos = getBoardPosition(players, player);
-        document.getElementById("p" + (pos)).innerHTML = player.name + player.score;
+
+        var stage = new Experience(player.score);
+        stage.start();
+
+        document.getElementById("p" + (pos)).innerHTML = player.name + player.score + stage.badge;
+
+      
     }
     blob.show();
     blob.update();
